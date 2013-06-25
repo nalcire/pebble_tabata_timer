@@ -10,13 +10,15 @@ TextLayer layers[3];
 TextLayer cycle_text;
 TextLayer work_text;
 TextLayer rest_text;
+TextLayer reset_text;
+TextLayer pause_text;
+TextLayer start_text;
 AppTimerHandle timer_handle;
 
 int config_mode;
 int timer_state;
 int timer_start;
 int pause_offset;
-int timer_elapsed;
 int elapsed_time_in_cycle;
 int previous_mode;
 int completed_cycles;
@@ -39,7 +41,6 @@ void window_timer_load(Window *window) {
     
     config_mode = TIMER_NONE;
     timer_state = TIMER_STATE_IDLE;
-    timer_elapsed = 0;
     pause_offset = 0;
     completed_cycles = 0;
     elapsed_time_in_cycle = 0;
@@ -81,6 +82,24 @@ void window_timer_load(Window *window) {
     text_layer_set_font(&rest_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(&rest_text, "rest");
     layer_add_child(root, &rest_text.layer);
+
+    text_layer_init(&reset_text, GRect(35,130,109,52));
+    text_layer_set_font(&reset_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+    text_layer_set_text(&reset_text, "1 more round -->");
+    layer_add_child(root, &reset_text.layer); 
+    layer_set_hidden(&reset_text.layer, true);
+
+    text_layer_init(&pause_text, GRect(35,0,109,25));
+    text_layer_set_font(&pause_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+    text_layer_set_text(&pause_text, "timer paused -->");
+    layer_add_child(root, &pause_text.layer);
+    layer_set_hidden(&pause_text.layer, true);
+
+    text_layer_init(&start_text, GRect(45,0,99,25));
+    text_layer_set_font(&start_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+    text_layer_set_text(&start_text, "start timer -->");
+    layer_add_child(root, &start_text.layer);
+    layer_set_hidden(&start_text.layer, false);
 }
 
 void timer_config_provider(ClickConfig **config, Window *window) {
@@ -99,6 +118,7 @@ void timer_config(ClickRecognizerRef recognizer, Window *window) {
     if( timer_state != TIMER_STATE_IDLE )
 	return;
 
+    layer_set_hidden(&start_text.layer, true);
     switch(config_mode) {
 	case TIMER_NONE:
 	    config_mode = TIMER_CYCLE;
@@ -112,6 +132,7 @@ void timer_config(ClickRecognizerRef recognizer, Window *window) {
 	case TIMER_REST:
 	    config_mode = TIMER_NONE;
 	    cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
+	    layer_set_hidden(&start_text.layer, false);
 	    break;
     }    
 
@@ -124,7 +145,8 @@ void timer_config(ClickRecognizerRef recognizer, Window *window) {
 void timer_config_stop(ClickRecognizerRef recognizer, Window *window) {
     config_mode = TIMER_NONE;
     cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
-
+    layer_set_hidden(&start_text.layer, false);
+    
     window_set_view();
     reset_display(TIMER_CYCLE);
     reset_display(TIMER_WORK);
@@ -151,19 +173,19 @@ void up_click(ClickRecognizerRef recognizer, Window *window) {
 	    toggle_timer();
 	    break;
 	case TIMER_CYCLE:
-	    if( timer_value[TIMER_CYCLE] > 1  ) {
+	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_CYCLE] > 1  ) {
 		timer_value[TIMER_CYCLE]--;
 		reset_display(config_mode);
 	    }
 	    break;
 	case TIMER_WORK:
-	    if( timer_value[TIMER_WORK] > 1 ) {
+	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_WORK] > 1 ) {
 		timer_value[TIMER_WORK]--;
 		reset_display(config_mode);
 	    }
 	    break;
 	case TIMER_REST:
-	    if( timer_value[TIMER_REST] > 1 ) {
+	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_REST] > 1 ) {
 		timer_value[TIMER_REST]--;
 		reset_display(config_mode);
 	    }
@@ -177,19 +199,19 @@ void down_click(ClickRecognizerRef recognizer, Window *window) {
 	    reset_timer();
 	    break;
 	case TIMER_CYCLE:
-	    if( timer_value[TIMER_CYCLE] < 99 ) {
+	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_CYCLE] < 99 ) {
 		timer_value[TIMER_CYCLE]++;
 		reset_display(config_mode);
 	    }
 	    break;
 	case TIMER_WORK:
-	    if( timer_value[TIMER_WORK] < 5999 ) {
+	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_WORK] < 5999 ) {
 		timer_value[TIMER_WORK]++;
 		reset_display(config_mode);
 	    }
 	    break;
 	case TIMER_REST:
-	    if( timer_value[TIMER_REST] < 5999 ) {
+	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_REST] < 5999 ) {
 		timer_value[TIMER_REST]++;
 		reset_display(config_mode);
 	    }
@@ -202,13 +224,14 @@ void toggle_timer() {
 	case TIMER_STATE_IDLE:
 	    previous_mode = TIMER_WORK;
 	    completed_cycles = 0;
+	    layer_set_hidden(&start_text.layer, true);
 	    start_timer();
 	    break;
 	case TIMER_STATE_RUNNING:
 	    app_timer_cancel_event(appCtx, timer_handle);
-	    pause_offset += timer_elapsed;
-	    timer_elapsed = 0; 
+	    pause_offset += get_ticks_now_in_seconds() - timer_start;
 	    timer_state = TIMER_STATE_PAUSED;
+	    layer_set_hidden(&pause_text.layer, false);
 	    break;
 	case TIMER_STATE_PAUSED:
 	    start_timer();
@@ -219,6 +242,7 @@ void toggle_timer() {
 void start_timer() {
     timer_start = get_ticks_now_in_seconds();
     timer_state = TIMER_STATE_RUNNING;
+    layer_set_hidden(&pause_text.layer, true);
     timer_handle = app_timer_send_event(appCtx, TIMER_TICK, COOKIE_TIMER);
 }
 
@@ -227,18 +251,19 @@ void reset_timer() {
     completed_cycles = 0;
     timer_state = TIMER_STATE_IDLE;
     app_timer_cancel_event(appCtx, timer_handle);
-    timer_elapsed = 0;
     elapsed_time_in_cycle = 0;
     pause_offset = 0;
     reset_display(TIMER_CYCLE);
     reset_display(TIMER_WORK);
     reset_display(TIMER_REST);
+    layer_set_hidden(&reset_text.layer, true);
+    layer_set_hidden(&start_text.layer, false);
 }
 
 void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
 
     int now = get_ticks_now_in_seconds();
-    int current_ticks = now - timer_start;
+    int current_ticks = now - timer_start + pause_offset;
    
     int cycles = current_ticks / cycle_length;
     if( cycles != completed_cycles ) {
@@ -256,14 +281,18 @@ void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
     }
     update_display(current_mode);
 
-    if( current_mode != previous_mode ) {
+    if( current_mode != previous_mode && completed_cycles < timer_value[TIMER_CYCLE]) {
 	vibes_short_pulse();
 	reset_display(previous_mode);
 	previous_mode = current_mode;
     }
 
-    if( completed_cycles >= timer_value[TIMER_CYCLE] )
+    if( completed_cycles >= timer_value[TIMER_CYCLE] ) {
+	layer_set_hidden(&reset_text.layer, false);
+	timer_state = TIMER_STATE_DONE;
+	vibes_long_pulse();
 	return;
+    }
 
     timer_handle = app_timer_send_event(appCtx, TIMER_TICK, COOKIE_TIMER);
 }

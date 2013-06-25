@@ -12,6 +12,7 @@
 #define TIMER_STATE_IDLE 0
 #define TIMER_STATE_RUNNING 1
 #define TIMER_STATE_PAUSED 2
+#define TIMER_STATE_DONE 3
 
 void window_timer_init();
 void window_timer_load(Window *window);
