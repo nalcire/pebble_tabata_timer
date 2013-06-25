@@ -17,9 +17,9 @@ int timer_state;
 int timer_start;
 int pause_offset;
 int timer_elapsed;
-int timer_elapsed_in_section;
+int elapsed_time_in_cycle;
 int previous_mode;
-int previous_cycle;
+int completed_cycles;
 int timer_value[] = {TIMER_DEFAULT_CYCLE, TIMER_DEFAULT_WORK, TIMER_DEFAULT_REST};
 int cycle_length;
 char timer_text[][15] = {"", "", ""};
@@ -41,8 +41,8 @@ void window_timer_load(Window *window) {
     timer_state = TIMER_STATE_IDLE;
     timer_elapsed = 0;
     pause_offset = 0;
-    previous_cycle = 0;
-    timer_elapsed_in_section = 0;
+    completed_cycles = 0;
+    elapsed_time_in_cycle = 0;
     cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
 
     convert_cycles_to_text(timer_value[TIMER_CYCLE], timer_text[TIMER_CYCLE]);
@@ -110,24 +110,25 @@ void timer_config(ClickRecognizerRef recognizer, Window *window) {
 	    config_mode = TIMER_REST;
 	    break;
 	case TIMER_REST:
-	    cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
 	    config_mode = TIMER_NONE;
+	    cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
 	    break;
     }    
 
     window_set_view(); 
-    update_display(TIMER_CYCLE);
-    update_display(TIMER_WORK);
-    update_display(TIMER_REST);
+    reset_display(TIMER_CYCLE);
+    reset_display(TIMER_WORK);
+    reset_display(TIMER_REST);
 }
 
 void timer_config_stop(ClickRecognizerRef recognizer, Window *window) {
-    window_set_view();
     config_mode = TIMER_NONE;
     cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
-    update_display(TIMER_CYCLE);
-    update_display(TIMER_WORK);
-    update_display(TIMER_REST);
+
+    window_set_view();
+    reset_display(TIMER_CYCLE);
+    reset_display(TIMER_WORK);
+    reset_display(TIMER_REST);
 }
 
 void window_set_view() {
@@ -150,21 +151,21 @@ void up_click(ClickRecognizerRef recognizer, Window *window) {
 	    toggle_timer();
 	    break;
 	case TIMER_CYCLE:
-	    if( timer_value[TIMER_CYCLE] > 0  ) {
+	    if( timer_value[TIMER_CYCLE] > 1  ) {
 		timer_value[TIMER_CYCLE]--;
-		update_display(config_mode);
+		reset_display(config_mode);
 	    }
 	    break;
 	case TIMER_WORK:
-	    if( timer_value[TIMER_WORK] > 0 ) {
+	    if( timer_value[TIMER_WORK] > 1 ) {
 		timer_value[TIMER_WORK]--;
-		update_display(config_mode);
+		reset_display(config_mode);
 	    }
 	    break;
 	case TIMER_REST:
-	    if( timer_value[TIMER_REST] > 0 ) {
+	    if( timer_value[TIMER_REST] > 1 ) {
 		timer_value[TIMER_REST]--;
-		update_display(config_mode);
+		reset_display(config_mode);
 	    }
 	    break;
     }
@@ -178,19 +179,19 @@ void down_click(ClickRecognizerRef recognizer, Window *window) {
 	case TIMER_CYCLE:
 	    if( timer_value[TIMER_CYCLE] < 99 ) {
 		timer_value[TIMER_CYCLE]++;
-		update_display(config_mode);
+		reset_display(config_mode);
 	    }
 	    break;
 	case TIMER_WORK:
 	    if( timer_value[TIMER_WORK] < 5999 ) {
 		timer_value[TIMER_WORK]++;
-		update_display(config_mode);
+		reset_display(config_mode);
 	    }
 	    break;
 	case TIMER_REST:
 	    if( timer_value[TIMER_REST] < 5999 ) {
 		timer_value[TIMER_REST]++;
-		update_display(config_mode);
+		reset_display(config_mode);
 	    }
 	    break;
     }
@@ -200,7 +201,7 @@ void toggle_timer() {
     switch(timer_state) {
 	case TIMER_STATE_IDLE:
 	    previous_mode = TIMER_WORK;
-	    previous_cycle = 0;
+	    completed_cycles = 0;
 	    start_timer();
 	    break;
 	case TIMER_STATE_RUNNING:
@@ -223,52 +224,46 @@ void start_timer() {
 
 void reset_timer() {
     previous_mode = TIMER_WORK;
-    previous_cycle = 0;
+    completed_cycles = 0;
     timer_state = TIMER_STATE_IDLE;
     app_timer_cancel_event(appCtx, timer_handle);
     timer_elapsed = 0;
-    timer_elapsed_in_section = 0;
+    elapsed_time_in_cycle = 0;
     pause_offset = 0;
-    update_display(TIMER_CYCLE);
-    update_display(TIMER_WORK);
-    update_display(TIMER_REST);
+    reset_display(TIMER_CYCLE);
+    reset_display(TIMER_WORK);
+    reset_display(TIMER_REST);
 }
 
 void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
 
     int now = get_ticks_now_in_seconds();
-    int current_tick = now - timer_start;
+    int current_ticks = now - timer_start;
    
-    int current_cycle = current_tick / cycle_length;
-    int current_time = current_tick % cycle_length;
-    
-    if( current_cycle != previous_cycle ) {
-	previous_cycle = current_cycle;
+    int cycles = current_ticks / cycle_length;
+    if( cycles != completed_cycles ) {
+	completed_cycles = cycles;
+	update_display(TIMER_CYCLE);
     }
-    
-    if( current_cycle > timer_value[TIMER_CYCLE] )
-	return;
 
+    elapsed_time_in_cycle  = current_ticks % cycle_length;
     int current_mode;
-    if( current_time <= timer_value[TIMER_WORK] )
+    if( elapsed_time_in_cycle < timer_value[TIMER_WORK] ) {
 	current_mode = TIMER_WORK;
-    else
+    }
+    else {
 	current_mode = TIMER_REST;
+    }
+    update_display(current_mode);
 
     if( current_mode != previous_mode ) {
 	vibes_short_pulse();
+	reset_display(previous_mode);
 	previous_mode = current_mode;
-	update_display(TIMER_CYCLE);
     }
-    
-    if( current_mode == TIMER_WORK ) {
-	timer_elapsed_in_section = current_time;
-	update_display(TIMER_WORK);
-    }
-    else {
-	timer_elapsed_in_section = current_time - timer_value[TIMER_WORK];
-	update_display(TIMER_REST);
-    }
+
+    if( completed_cycles >= timer_value[TIMER_CYCLE] )
+	return;
 
     timer_handle = app_timer_send_event(appCtx, TIMER_TICK, COOKIE_TIMER);
 }
@@ -276,11 +271,28 @@ void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
 void update_display(int section) {
     switch(section) {
 	case TIMER_CYCLE:
-	    convert_cycles_to_text(timer_value[section] - previous_cycle, timer_text[section]);
+	    convert_cycles_to_text(timer_value[section] - completed_cycles, timer_text[section]);
+	    break;
+	case TIMER_WORK:
+	    convert_seconds_to_text(timer_value[section] - elapsed_time_in_cycle, timer_text[section]);
+	    break;
+	case TIMER_REST:
+	    convert_seconds_to_text(timer_value[section] - (elapsed_time_in_cycle - timer_value[TIMER_WORK]), timer_text[section]);
+	    break;
+    }
+
+    text_layer_set_text(&layers[section], timer_text[section]);
+    layer_mark_dirty(&layers[section].layer);
+}
+
+void reset_display(int section) {
+    switch(section) {
+	case TIMER_CYCLE:
+	    convert_cycles_to_text(timer_value[TIMER_CYCLE], timer_text[TIMER_CYCLE]);
 	    break;
 	case TIMER_WORK:
 	case TIMER_REST:
-	    convert_seconds_to_text(timer_value[section] - timer_elapsed_in_section, timer_text[section]);
+	    convert_seconds_to_text(timer_value[section], timer_text[section]);
 	    break;
     }
 

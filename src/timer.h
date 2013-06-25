@@ -26,5 +26,6 @@ void start_timer();
 void reset_timer();
 void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle);
 void update_display(int section);
+void reset_display(int section);
 void convert_seconds_to_text(int seconds, char *text);
 void convert_cycles_to_text(int cycles, char *text);
