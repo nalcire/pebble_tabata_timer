@@ -187,7 +187,6 @@ void up_click(ClickRecognizerRef recognizer, Window *window) {
     switch(config_mode) {
 	case TIMER_NONE:
 	    if( timer_state != TIMER_STATE_COUNTDOWN ) 
-		
 		toggle_timer();
 	    break;
 	case TIMER_CYCLE:
@@ -251,6 +250,7 @@ void toggle_timer() {
 	    pause_offset += get_ticks_now_in_seconds() - timer_start;
 	    timer_state = TIMER_STATE_PAUSED;
 	    layer_set_hidden(&pause_text.layer, false);
+	    vibes_short_pulse();
 	    break;
 	case TIMER_STATE_PAUSED:
 	    start_countdown();
@@ -331,15 +331,23 @@ void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
     update_display(current_mode);
 
     if( current_mode != previous_mode && completed_cycles < timer_value[TIMER_CYCLE]) {
-	vibes_short_pulse();
+	if( current_ticks < (timer_value[TIMER_WORK] + timer_value[TIMER_REST]) * timer_value[TIMER_CYCLE] - timer_value[TIMER_REST] )
+	    vibes_long_pulse();
 	reset_display(previous_mode);
 	previous_mode = current_mode;
     }
 
-    if( completed_cycles >= timer_value[TIMER_CYCLE] ) {
+    if( completed_cycles == timer_value[TIMER_CYCLE] - 1 && current_mode == TIMER_REST ) {
 	layer_set_hidden(&reset_text.layer, false);
 	timer_state = TIMER_STATE_DONE;
-	vibes_long_pulse();
+
+	const uint32_t segments[] = {100, 100, 100, 100, 100};
+	VibePattern pat = {
+	    .durations = segments,
+	    .num_segments = ARRAY_LENGTH(segments)
+	};
+	vibes_enqueue_custom_pattern(pat);	
+
 	return;
     }
 
