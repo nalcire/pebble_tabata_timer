@@ -20,7 +20,14 @@ void handle_init(AppContextRef ctx) {
 }
 
 void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
-    timer_handle_timer(ctx, handle);
+    switch(cookie) {
+	case COOKIE_TIMER: 
+	    timer_handle_timer(ctx, handle);
+	    break;
+	case COOKIE_COUNTDOWN:
+	    countdown_handle_timer(ctx, handle);
+	    break;
+    }
 }
 
 void pbl_main(void *params) {

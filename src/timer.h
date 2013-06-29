@@ -13,6 +13,7 @@
 #define TIMER_STATE_RUNNING 1
 #define TIMER_STATE_PAUSED 2
 #define TIMER_STATE_DONE 3
+#define TIMER_STATE_COUNTDOWN 4
 
 void window_timer_init();
 void window_timer_load(Window *window);
@@ -24,9 +25,12 @@ void timer_config(ClickRecognizerRef recognizer, Window *window);
 void timer_config_stop(ClickRecognizerRef recognizer, Window *window);
 void toggle_timer();
 void start_timer();
+void start_countdown();
 void reset_timer();
 void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle);
+void countdown_handle_timer(AppContextRef ctx, AppTimerHandle handle);
 void update_display(int section);
+void update_countdown(int second);
 void reset_display(int section);
 void convert_seconds_to_text(int seconds, char *text);
 void convert_cycles_to_text(int cycles, char *text);

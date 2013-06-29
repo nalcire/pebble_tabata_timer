@@ -13,11 +13,16 @@ TextLayer rest_text;
 TextLayer reset_text;
 TextLayer pause_text;
 TextLayer start_text;
+TextLayer countdown_text;
+Layer timer_layer;
+Layer countdown_layer;
+
 AppTimerHandle timer_handle;
 
 int config_mode;
 int timer_state;
 int timer_start;
+int timer_countdown_elapsed;
 int pause_offset;
 int elapsed_time_in_cycle;
 int previous_mode;
@@ -50,55 +55,66 @@ void window_timer_load(Window *window) {
     convert_seconds_to_text(timer_value[TIMER_WORK], timer_text[TIMER_WORK]);
     convert_seconds_to_text(timer_value[TIMER_REST], timer_text[TIMER_REST]);
 
+    layer_init(&timer_layer, GRect(0,0,144,167));
+    layer_add_child(root, &timer_layer);
+    layer_init(&countdown_layer, GRect(0,0,144,167));
+    layer_add_child(root, &countdown_layer);
+    layer_set_hidden(&countdown_layer, true);
+
+    text_layer_init(&countdown_text, GRect(20,45,120,55));
+    text_layer_set_font(&countdown_text, fonts_get_system_font(FONT_KEY_GOTHAM_42_LIGHT));
+    text_layer_set_text(&countdown_text, "ready");
+    layer_add_child(&countdown_layer, &countdown_text.layer);
+
     text_layer_init(&layers[TIMER_CYCLE], GRect(28,25,27,30));
     text_layer_set_font(&layers[TIMER_CYCLE], fonts_get_system_font(FONT_KEY_GOTHIC_28));
     text_layer_set_text_color(&layers[TIMER_CYCLE], GColorBlack);
     text_layer_set_text(&layers[TIMER_CYCLE], timer_text[TIMER_CYCLE]);
-    layer_add_child(root, &layers[TIMER_CYCLE].layer);
+    layer_add_child(&timer_layer, &layers[TIMER_CYCLE].layer);
 
     text_layer_init(&cycle_text, GRect(55,25,80,30));
     text_layer_set_font(&cycle_text, fonts_get_system_font(FONT_KEY_GOTHIC_28));
     text_layer_set_text(&cycle_text, "cycles");
-    layer_add_child(root, &cycle_text.layer);
+    layer_add_child(&timer_layer, &cycle_text.layer);
  
     text_layer_init(&layers[TIMER_WORK], GRect(63,55,53,30));
     text_layer_set_font(&layers[TIMER_WORK], fonts_get_system_font(FONT_KEY_GOTHIC_28));
     text_layer_set_text_color(&layers[TIMER_WORK], GColorBlack);
     text_layer_set_text(&layers[TIMER_WORK], timer_text[TIMER_WORK]);
-    layer_add_child(root, &layers[TIMER_WORK].layer);
+    layer_add_child(&timer_layer, &layers[TIMER_WORK].layer);
 
     text_layer_init(&work_text, GRect(28,60,30,30));
     text_layer_set_font(&work_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(&work_text, "work");
-    layer_add_child(root, &work_text.layer);
+    layer_add_child(&timer_layer, &work_text.layer);
 
     text_layer_init(&layers[TIMER_REST], GRect(63,85,53,30));
     text_layer_set_font(&layers[TIMER_REST], fonts_get_system_font(FONT_KEY_GOTHIC_28));
     text_layer_set_text_color(&layers[TIMER_REST], GColorBlack);
     text_layer_set_text(&layers[TIMER_REST], timer_text[TIMER_REST]);
-    layer_add_child(root, &layers[TIMER_REST].layer);
+    layer_add_child(&timer_layer, &layers[TIMER_REST].layer);
 
     text_layer_init(&rest_text, GRect(28,90,30,30));
     text_layer_set_font(&rest_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(&rest_text, "rest");
-    layer_add_child(root, &rest_text.layer);
+    layer_add_child(&timer_layer, &rest_text.layer);
 
     text_layer_init(&reset_text, GRect(35,130,109,52));
     text_layer_set_font(&reset_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(&reset_text, "1 more round -->");
-    layer_add_child(root, &reset_text.layer); 
+    layer_add_child(&timer_layer, &reset_text.layer); 
     layer_set_hidden(&reset_text.layer, true);
 
     text_layer_init(&pause_text, GRect(35,0,109,25));
     text_layer_set_font(&pause_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(&pause_text, "timer paused -->");
-    layer_add_child(root, &pause_text.layer);
+    layer_add_child(&timer_layer, &pause_text.layer);
     layer_set_hidden(&pause_text.layer, true);
 
     text_layer_init(&start_text, GRect(45,0,99,25));
     text_layer_set_font(&start_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(&start_text, "start timer -->");
-    layer_add_child(root, &start_text.layer);
+    layer_add_child(&timer_layer, &start_text.layer);
     layer_set_hidden(&start_text.layer, false);
 }
 
@@ -170,7 +186,9 @@ void up_click(ClickRecognizerRef recognizer, Window *window) {
     
     switch(config_mode) {
 	case TIMER_NONE:
-	    toggle_timer();
+	    if( timer_state != TIMER_STATE_COUNTDOWN ) 
+		
+		toggle_timer();
 	    break;
 	case TIMER_CYCLE:
 	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_CYCLE] > 1  ) {
@@ -196,7 +214,8 @@ void up_click(ClickRecognizerRef recognizer, Window *window) {
 void down_click(ClickRecognizerRef recognizer, Window *window) {
     switch(config_mode) {
 	case TIMER_NONE:
-	    reset_timer();
+	    if( timer_state != TIMER_STATE_COUNTDOWN )
+		reset_timer();
 	    break;
 	case TIMER_CYCLE:
 	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_CYCLE] < 99 ) {
@@ -225,7 +244,7 @@ void toggle_timer() {
 	    previous_mode = TIMER_WORK;
 	    completed_cycles = 0;
 	    layer_set_hidden(&start_text.layer, true);
-	    start_timer();
+	    start_countdown();
 	    break;
 	case TIMER_STATE_RUNNING:
 	    app_timer_cancel_event(appCtx, timer_handle);
@@ -234,16 +253,27 @@ void toggle_timer() {
 	    layer_set_hidden(&pause_text.layer, false);
 	    break;
 	case TIMER_STATE_PAUSED:
-	    start_timer();
+	    start_countdown();
 	    break;
     }
 }
 
 void start_timer() {
+    vibes_long_pulse();
     timer_start = get_ticks_now_in_seconds();
     timer_state = TIMER_STATE_RUNNING;
     layer_set_hidden(&pause_text.layer, true);
+    layer_set_hidden(&timer_layer, false);
+    layer_set_hidden(&countdown_layer, true);
     timer_handle = app_timer_send_event(appCtx, TIMER_TICK, COOKIE_TIMER);
+}
+
+void start_countdown() {
+    timer_countdown_elapsed = 0;
+    timer_state = TIMER_STATE_COUNTDOWN;
+    layer_set_hidden(&timer_layer, true);
+    layer_set_hidden(&countdown_layer, false);
+    timer_handle = app_timer_send_event(appCtx, 1000, COOKIE_COUNTDOWN);
 }
 
 void reset_timer() {
@@ -253,12 +283,30 @@ void reset_timer() {
     app_timer_cancel_event(appCtx, timer_handle);
     elapsed_time_in_cycle = 0;
     pause_offset = 0;
+    timer_countdown_elapsed = 0;
     reset_display(TIMER_CYCLE);
     reset_display(TIMER_WORK);
     reset_display(TIMER_REST);
     layer_set_hidden(&reset_text.layer, true);
     layer_set_hidden(&start_text.layer, false);
     layer_set_hidden(&pause_text.layer, true);
+}
+
+void countdown_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
+    switch(timer_countdown_elapsed) {
+	case 0:
+	case 1:
+	case 2:
+	    update_countdown(timer_countdown_elapsed++);
+	    vibes_double_pulse();
+	    timer_handle = app_timer_send_event(appCtx, 1000, COOKIE_COUNTDOWN);    
+	    break;	
+	case 3:
+	    timer_countdown_elapsed = 0;
+	    update_countdown(0);
+	    start_timer();
+	    break;
+    }
 }
 
 void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
@@ -296,6 +344,20 @@ void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
     }
 
     timer_handle = app_timer_send_event(appCtx, TIMER_TICK, COOKIE_TIMER);
+}
+
+void update_countdown(int second) {
+    switch(second) {
+	case 0:
+	    text_layer_set_text(&countdown_text, "ready");
+	    break;
+	case 1:
+	    text_layer_set_text(&countdown_text, "  set");
+	    break;
+	case 2:
+	    text_layer_set_text(&countdown_text, "  go!");
+	    break;
+    }
 }
 
 void update_display(int section) {
