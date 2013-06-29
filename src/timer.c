@@ -258,6 +258,7 @@ void reset_timer() {
     reset_display(TIMER_REST);
     layer_set_hidden(&reset_text.layer, true);
     layer_set_hidden(&start_text.layer, false);
+    layer_set_hidden(&pause_text.layer, true);
 }
 
 void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
