@@ -1,23 +1,20 @@
-#include "pebble_os.h"
-#include "pebble_app.h"
-#include "pebble_fonts.h"
-#include "app.h"
+#include <pebble.h>
 #include "timer.h"
 #include "lib.h"
 
-Window window_timer;
-TextLayer layers[3];
-TextLayer cycle_text;
-TextLayer work_text;
-TextLayer rest_text;
-TextLayer reset_text;
-TextLayer pause_text;
-TextLayer start_text;
-TextLayer countdown_text;
-Layer timer_layer;
-Layer countdown_layer;
+Window *window_timer;
+TextLayer *layers[3];
+TextLayer *cycle_text;
+TextLayer *work_text;
+TextLayer *rest_text;
+TextLayer *reset_text;
+TextLayer *pause_text;
+TextLayer *start_text;
+TextLayer *countdown_text;
+Layer *timer_layer;
+Layer *countdown_layer;
 
-AppTimerHandle timer_handle;
+AppTimer *timer_handle;
 
 int config_mode;
 int timer_state;
@@ -32,13 +29,31 @@ int cycle_length;
 char timer_text[][15] = {"", "", ""};
 
 void window_timer_init() {
-    window_init(&window_timer, "timer");
-    window_set_click_config_provider(&window_timer, (ClickConfigProvider) timer_config_provider);
+    window_timer = window_create();
+    window_set_click_config_provider(window_timer, timer_config_provider);
     WindowHandlers window_handlers = {
 	.load = &window_timer_load
     };
-    window_set_window_handlers(&window_timer, window_handlers);
-    window_stack_push(&window_timer, true);
+    window_set_window_handlers(window_timer, window_handlers);
+    window_stack_push(window_timer, true);
+}
+
+void window_timer_deinit() {
+    for(int i = 0; i < 3; i++) {
+	text_layer_destroy(layers[i]);
+    }
+ 
+    text_layer_destroy(cycle_text);
+    text_layer_destroy(work_text);
+    text_layer_destroy(rest_text);
+    text_layer_destroy(reset_text);
+    text_layer_destroy(pause_text);
+    text_layer_destroy(start_text);
+    text_layer_destroy(countdown_text);
+    layer_destroy(timer_layer);
+    layer_destroy(countdown_layer);
+
+    window_destroy(window_timer);
 }
 
 void window_timer_load(Window *window) {
@@ -55,86 +70,82 @@ void window_timer_load(Window *window) {
     convert_seconds_to_text(timer_value[TIMER_WORK], timer_text[TIMER_WORK]);
     convert_seconds_to_text(timer_value[TIMER_REST], timer_text[TIMER_REST]);
 
-    layer_init(&timer_layer, GRect(0,0,144,167));
-    layer_add_child(root, &timer_layer);
-    layer_init(&countdown_layer, GRect(0,0,144,167));
-    layer_add_child(root, &countdown_layer);
-    layer_set_hidden(&countdown_layer, true);
+    timer_layer = layer_create(GRect(0,0,144,167));
+    layer_add_child(root, timer_layer);
+    countdown_layer = layer_create(GRect(0,0,144,167));
+    layer_add_child(root, countdown_layer);
+    layer_set_hidden(countdown_layer, true);
 
-    text_layer_init(&countdown_text, GRect(20,45,120,55));
-    text_layer_set_font(&countdown_text, fonts_get_system_font(FONT_KEY_GOTHAM_42_LIGHT));
-    text_layer_set_text(&countdown_text, "ready");
-    layer_add_child(&countdown_layer, &countdown_text.layer);
+    countdown_text = text_layer_create(GRect(20,45,120,55));
+    text_layer_set_font(countdown_text, fonts_get_system_font(FONT_KEY_BITHAM_42_LIGHT));
+    text_layer_set_text(countdown_text, "ready");
+    layer_add_child(countdown_layer, text_layer_get_layer(countdown_text));
 
-    text_layer_init(&layers[TIMER_CYCLE], GRect(28,25,27,30));
-    text_layer_set_font(&layers[TIMER_CYCLE], fonts_get_system_font(FONT_KEY_GOTHIC_28));
-    text_layer_set_text_color(&layers[TIMER_CYCLE], GColorBlack);
-    text_layer_set_text(&layers[TIMER_CYCLE], timer_text[TIMER_CYCLE]);
-    layer_add_child(&timer_layer, &layers[TIMER_CYCLE].layer);
+    layers[TIMER_CYCLE] = text_layer_create(GRect(28,25,27,30));
+    text_layer_set_font(layers[TIMER_CYCLE], fonts_get_system_font(FONT_KEY_GOTHIC_28));
+    text_layer_set_text_color(layers[TIMER_CYCLE], GColorBlack);
+    text_layer_set_text(layers[TIMER_CYCLE], timer_text[TIMER_CYCLE]);
+    layer_add_child(timer_layer, text_layer_get_layer(layers[TIMER_CYCLE]));
 
-    text_layer_init(&cycle_text, GRect(55,25,80,30));
-    text_layer_set_font(&cycle_text, fonts_get_system_font(FONT_KEY_GOTHIC_28));
-    text_layer_set_text(&cycle_text, "cycles");
-    layer_add_child(&timer_layer, &cycle_text.layer);
+    cycle_text = text_layer_create(GRect(55,25,80,30));
+    text_layer_set_font(cycle_text, fonts_get_system_font(FONT_KEY_GOTHIC_24));
+    text_layer_set_text(cycle_text, "cycles");
+    layer_add_child(timer_layer, text_layer_get_layer(cycle_text));
  
-    text_layer_init(&layers[TIMER_WORK], GRect(63,55,53,30));
-    text_layer_set_font(&layers[TIMER_WORK], fonts_get_system_font(FONT_KEY_GOTHIC_28));
-    text_layer_set_text_color(&layers[TIMER_WORK], GColorBlack);
-    text_layer_set_text(&layers[TIMER_WORK], timer_text[TIMER_WORK]);
-    layer_add_child(&timer_layer, &layers[TIMER_WORK].layer);
+    layers[TIMER_WORK] = text_layer_create(GRect(63,55,53,30));
+    text_layer_set_font(layers[TIMER_WORK], fonts_get_system_font(FONT_KEY_GOTHIC_28));
+    text_layer_set_text_color(layers[TIMER_WORK], GColorBlack);
+    text_layer_set_text(layers[TIMER_WORK], timer_text[TIMER_WORK]);
+    layer_add_child(timer_layer, text_layer_get_layer(layers[TIMER_WORK]));
 
-    text_layer_init(&work_text, GRect(28,60,30,30));
-    text_layer_set_font(&work_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-    text_layer_set_text(&work_text, "work");
-    layer_add_child(&timer_layer, &work_text.layer);
+    work_text = text_layer_create(GRect(28,60,30,30));
+    text_layer_set_font(work_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+    text_layer_set_text(work_text, "work");
+    layer_add_child(timer_layer, text_layer_get_layer(work_text));
 
-    text_layer_init(&layers[TIMER_REST], GRect(63,85,53,30));
-    text_layer_set_font(&layers[TIMER_REST], fonts_get_system_font(FONT_KEY_GOTHIC_28));
-    text_layer_set_text_color(&layers[TIMER_REST], GColorBlack);
-    text_layer_set_text(&layers[TIMER_REST], timer_text[TIMER_REST]);
-    layer_add_child(&timer_layer, &layers[TIMER_REST].layer);
+    layers[TIMER_REST] = text_layer_create(GRect(63,85,53,30));
+    text_layer_set_font(layers[TIMER_REST], fonts_get_system_font(FONT_KEY_GOTHIC_28));
+    text_layer_set_text_color(layers[TIMER_REST], GColorBlack);
+    text_layer_set_text(layers[TIMER_REST], timer_text[TIMER_REST]);
+    layer_add_child(timer_layer, text_layer_get_layer(layers[TIMER_REST]));
 
-    text_layer_init(&rest_text, GRect(28,90,30,30));
-    text_layer_set_font(&rest_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-    text_layer_set_text(&rest_text, "rest");
-    layer_add_child(&timer_layer, &rest_text.layer);
+    rest_text = text_layer_create(GRect(28,90,30,30));
+    text_layer_set_font(rest_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+    text_layer_set_text(rest_text, "rest");
+    layer_add_child(timer_layer, text_layer_get_layer(rest_text));
 
-    text_layer_init(&reset_text, GRect(35,130,109,52));
-    text_layer_set_font(&reset_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-    text_layer_set_text(&reset_text, "1 more round -->");
-    layer_add_child(&timer_layer, &reset_text.layer); 
-    layer_set_hidden(&reset_text.layer, true);
+    reset_text = text_layer_create(GRect(35,130,109,52));
+    text_layer_set_font(reset_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+    text_layer_set_text(reset_text, "1 more round -->");
+    layer_add_child(timer_layer, text_layer_get_layer(reset_text)); 
+    layer_set_hidden(text_layer_get_layer(reset_text), true);
 
-    text_layer_init(&pause_text, GRect(35,0,109,25));
-    text_layer_set_font(&pause_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-    text_layer_set_text(&pause_text, "timer paused -->");
-    layer_add_child(&timer_layer, &pause_text.layer);
-    layer_set_hidden(&pause_text.layer, true);
+    pause_text = text_layer_create(GRect(35,0,109,25));
+    text_layer_set_font(pause_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+    text_layer_set_text(pause_text, "timer paused -->");
+    layer_add_child(timer_layer, text_layer_get_layer(pause_text));
+    layer_set_hidden(text_layer_get_layer(pause_text), true);
 
-    text_layer_init(&start_text, GRect(45,0,99,25));
-    text_layer_set_font(&start_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-    text_layer_set_text(&start_text, "start timer -->");
-    layer_add_child(&timer_layer, &start_text.layer);
-    layer_set_hidden(&start_text.layer, false);
+    start_text = text_layer_create(GRect(45,0,99,25));
+    text_layer_set_font(start_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+    text_layer_set_text(start_text, "start timer -->");
+    layer_add_child(timer_layer, text_layer_get_layer(start_text));
+    layer_set_hidden(text_layer_get_layer(start_text), false);
 }
 
-void timer_config_provider(ClickConfig **config, Window *window) {
-    config[BUTTON_ID_UP]->click.handler = (ClickHandler) up_click;
-    config[BUTTON_ID_UP]->click.repeat_interval_ms = 30;
-    config[BUTTON_ID_DOWN]->click.handler = (ClickHandler) down_click;
-    config[BUTTON_ID_DOWN]->click.repeat_interval_ms = 30;
-    config[BUTTON_ID_SELECT]->click.handler = (ClickHandler) timer_config;
-    config[BUTTON_ID_SELECT]->long_click.handler = (ClickHandler) timer_config_stop;
-    config[BUTTON_ID_SELECT]->long_click.release_handler = (ClickHandler) timer_config_stop;
-    config[BUTTON_ID_SELECT]->long_click.delay_ms = 1000;
+void timer_config_provider(void *context) {
+    window_single_repeating_click_subscribe(BUTTON_ID_UP, 30, (ClickHandler)up_click);
+    window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, (ClickHandler)down_click);
+    window_single_click_subscribe(BUTTON_ID_SELECT, (ClickHandler)timer_config);
+    window_long_click_subscribe(BUTTON_ID_SELECT, 1000, (ClickHandler)timer_config_stop, (ClickHandler)timer_config_stop);
 }
 
-void timer_config(ClickRecognizerRef recognizer, Window *window) {
+void timer_config(ClickRecognizerRef recognizer, void *context) {
 
     if( timer_state != TIMER_STATE_IDLE )
 	return;
 
-    layer_set_hidden(&start_text.layer, true);
+    layer_set_hidden(text_layer_get_layer(start_text), true);
     switch(config_mode) {
 	case TIMER_NONE:
 	    config_mode = TIMER_CYCLE;
@@ -148,7 +159,7 @@ void timer_config(ClickRecognizerRef recognizer, Window *window) {
 	case TIMER_REST:
 	    config_mode = TIMER_NONE;
 	    cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
-	    layer_set_hidden(&start_text.layer, false);
+	    layer_set_hidden(text_layer_get_layer(start_text), false);
 	    break;
     }    
 
@@ -158,10 +169,10 @@ void timer_config(ClickRecognizerRef recognizer, Window *window) {
     reset_display(TIMER_REST);
 }
 
-void timer_config_stop(ClickRecognizerRef recognizer, Window *window) {
+void timer_config_stop(ClickRecognizerRef recognizer, void *context) {
     config_mode = TIMER_NONE;
     cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
-    layer_set_hidden(&start_text.layer, false);
+    layer_set_hidden(text_layer_get_layer(start_text), false);
     
     window_set_view();
     reset_display(TIMER_CYCLE);
@@ -172,17 +183,17 @@ void timer_config_stop(ClickRecognizerRef recognizer, Window *window) {
 void window_set_view() {
     for(int i = 0; i < 3; i++) {
 	if( i == config_mode ) {
-	    text_layer_set_text_color(&layers[i], GColorWhite);
-	    text_layer_set_background_color(&layers[i], GColorBlack);
+	    text_layer_set_text_color(layers[i], GColorWhite);
+	    text_layer_set_background_color(layers[i], GColorBlack);
 	}
 	else {
-	    text_layer_set_text_color(&layers[i], GColorBlack);
-	    text_layer_set_background_color(&layers[i], GColorWhite);
+	    text_layer_set_text_color(layers[i], GColorBlack);
+	    text_layer_set_background_color(layers[i], GColorWhite);
 	}	
     } 
 }
 	
-void up_click(ClickRecognizerRef recognizer, Window *window) {
+void up_click(ClickRecognizerRef recognizer, void *context) {
     
     switch(config_mode) {
 	case TIMER_NONE:
@@ -210,7 +221,7 @@ void up_click(ClickRecognizerRef recognizer, Window *window) {
     }
 }
 
-void down_click(ClickRecognizerRef recognizer, Window *window) {
+void down_click(ClickRecognizerRef recognizer, void *context) {
     switch(config_mode) {
 	case TIMER_NONE:
 	    if( timer_state != TIMER_STATE_COUNTDOWN )
@@ -242,14 +253,14 @@ void toggle_timer() {
 	case TIMER_STATE_IDLE:
 	    previous_mode = TIMER_WORK;
 	    completed_cycles = 0;
-	    layer_set_hidden(&start_text.layer, true);
+	    layer_set_hidden(text_layer_get_layer(start_text), true);
 	    start_countdown();
 	    break;
 	case TIMER_STATE_RUNNING:
-	    app_timer_cancel_event(appCtx, timer_handle);
+	    app_timer_cancel(timer_handle);
 	    pause_offset += get_ticks_now_in_seconds() - timer_start;
 	    timer_state = TIMER_STATE_PAUSED;
-	    layer_set_hidden(&pause_text.layer, false);
+	    layer_set_hidden(text_layer_get_layer(pause_text), false);
 	    vibes_short_pulse();
 	    break;
 	case TIMER_STATE_PAUSED:
@@ -262,44 +273,44 @@ void start_timer() {
     vibes_long_pulse();
     timer_start = get_ticks_now_in_seconds();
     timer_state = TIMER_STATE_RUNNING;
-    layer_set_hidden(&pause_text.layer, true);
-    layer_set_hidden(&timer_layer, false);
-    layer_set_hidden(&countdown_layer, true);
-    timer_handle = app_timer_send_event(appCtx, TIMER_TICK, COOKIE_TIMER);
+    layer_set_hidden(text_layer_get_layer(pause_text), true);
+    layer_set_hidden(timer_layer, false);
+    layer_set_hidden(countdown_layer, true);
+    timer_handle = app_timer_register(TIMER_TICK, timer_handle_timer, NULL);
 }
 
 void start_countdown() {
     timer_countdown_elapsed = 0;
     timer_state = TIMER_STATE_COUNTDOWN;
-    layer_set_hidden(&timer_layer, true);
-    layer_set_hidden(&countdown_layer, false);
-    timer_handle = app_timer_send_event(appCtx, 1000, COOKIE_COUNTDOWN);
+    layer_set_hidden(timer_layer, true);
+    layer_set_hidden(countdown_layer, false);
+    timer_handle = app_timer_register(1000, countdown_handle_timer, NULL);
 }
 
 void reset_timer() {
     previous_mode = TIMER_WORK;
     completed_cycles = 0;
     timer_state = TIMER_STATE_IDLE;
-    app_timer_cancel_event(appCtx, timer_handle);
+    app_timer_cancel(timer_handle);
     elapsed_time_in_cycle = 0;
     pause_offset = 0;
     timer_countdown_elapsed = 0;
     reset_display(TIMER_CYCLE);
     reset_display(TIMER_WORK);
     reset_display(TIMER_REST);
-    layer_set_hidden(&reset_text.layer, true);
-    layer_set_hidden(&start_text.layer, false);
-    layer_set_hidden(&pause_text.layer, true);
+    layer_set_hidden(text_layer_get_layer(reset_text), true);
+    layer_set_hidden(text_layer_get_layer(start_text), false);
+    layer_set_hidden(text_layer_get_layer(pause_text), true);
 }
 
-void countdown_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
+void countdown_handle_timer() {
     switch(timer_countdown_elapsed) {
 	case 0:
 	case 1:
 	case 2:
 	    update_countdown(timer_countdown_elapsed++);
 	    vibes_double_pulse();
-	    timer_handle = app_timer_send_event(appCtx, 1000, COOKIE_COUNTDOWN);    
+	    timer_handle = app_timer_register(1000, countdown_handle_timer, NULL); 	    
 	    break;	
 	case 3:
 	    timer_countdown_elapsed = 0;
@@ -309,7 +320,7 @@ void countdown_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
     }
 }
 
-void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
+void timer_handle_timer() {
 
     int now = get_ticks_now_in_seconds();
     int current_ticks = now - timer_start + pause_offset;
@@ -338,7 +349,7 @@ void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
     }
 
     if( completed_cycles == timer_value[TIMER_CYCLE] - 1 && current_mode == TIMER_REST ) {
-	layer_set_hidden(&reset_text.layer, false);
+	layer_set_hidden(text_layer_get_layer(reset_text), false);
 	timer_state = TIMER_STATE_DONE;
 
 	const uint32_t segments[] = {100, 100, 100, 100, 100};
@@ -351,19 +362,19 @@ void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle) {
 	return;
     }
 
-    timer_handle = app_timer_send_event(appCtx, TIMER_TICK, COOKIE_TIMER);
+    timer_handle = app_timer_register(TIMER_TICK, timer_handle_timer, NULL);
 }
 
 void update_countdown(int second) {
     switch(second) {
 	case 0:
-	    text_layer_set_text(&countdown_text, "ready");
+	    text_layer_set_text(countdown_text, "ready");
 	    break;
 	case 1:
-	    text_layer_set_text(&countdown_text, "  set");
+	    text_layer_set_text(countdown_text, "  set");
 	    break;
 	case 2:
-	    text_layer_set_text(&countdown_text, "  go!");
+	    text_layer_set_text(countdown_text, "  go!");
 	    break;
     }
 }
@@ -381,8 +392,8 @@ void update_display(int section) {
 	    break;
     }
 
-    text_layer_set_text(&layers[section], timer_text[section]);
-    layer_mark_dirty(&layers[section].layer);
+    text_layer_set_text(layers[section], timer_text[section]);
+    layer_mark_dirty(text_layer_get_layer(layers[section]));
 }
 
 void reset_display(int section) {
@@ -396,8 +407,8 @@ void reset_display(int section) {
 	    break;
     }
 
-    text_layer_set_text(&layers[section], timer_text[section]);
-    layer_mark_dirty(&layers[section].layer);
+    text_layer_set_text(layers[section], timer_text[section]);
+    layer_mark_dirty(text_layer_get_layer(layers[section]));
 }
 
 void convert_seconds_to_text(int ticks, char *text) {

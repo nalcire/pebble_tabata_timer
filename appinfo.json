@@ -1,0 +1,15 @@
+{
+  "uuid": "113ae717-fb8d-422a-a4e3-797cddc6be91",
+  "shortName": "Tabata Timer",
+  "longName": "Tabata Timer",
+  "companyName": "nalcire",
+  "versionCode": 1,
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {},
+  "resources": {
+    "media": []
+  }
+}

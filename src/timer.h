@@ -16,19 +16,20 @@
 #define TIMER_STATE_COUNTDOWN 4
 
 void window_timer_init();
+void window_timer_deinit();
 void window_timer_load(Window *window);
-void timer_config_provider(ClickConfig **config, Window *window);
+void timer_config_provider(void *context);
 void window_set_view();
-void down_click(ClickRecognizerRef recognizer, Window *window);
-void up_click(ClickRecognizerRef recognizer, Window *window);
-void timer_config(ClickRecognizerRef recognizer, Window *window);
-void timer_config_stop(ClickRecognizerRef recognizer, Window *window);
+void down_click(ClickRecognizerRef recognizer, void *context);
+void up_click(ClickRecognizerRef recognizer, void *context);
+void timer_config(ClickRecognizerRef recognizer, void *context);
+void timer_config_stop(ClickRecognizerRef recognizer, void *context);
 void toggle_timer();
 void start_timer();
 void start_countdown();
 void reset_timer();
-void timer_handle_timer(AppContextRef ctx, AppTimerHandle handle);
-void countdown_handle_timer(AppContextRef ctx, AppTimerHandle handle);
+void timer_handle_timer();
+void countdown_handle_timer();
 void update_display(int section);
 void update_countdown(int second);
 void reset_display(int section);
