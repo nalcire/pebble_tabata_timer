@@ -1,3 +1,7 @@
+#define PERSIST_KEY_CYCLE 0 
+#define PERSIST_KEY_WORK 1
+#define PERSIST_KEY_REST 2
+
 #define TIMER_DEFAULT_CYCLE 8
 #define TIMER_DEFAULT_WORK 20
 #define TIMER_DEFAULT_REST 10
@@ -18,6 +22,8 @@
 void window_timer_init();
 void window_timer_deinit();
 void window_timer_load(Window *window);
+void load_values();
+void persist_values();
 void timer_config_provider(void *context);
 void window_set_view();
 void down_click(ClickRecognizerRef recognizer, void *context);

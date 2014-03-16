@@ -29,6 +29,7 @@ int cycle_length;
 char timer_text[][15] = {"", "", ""};
 
 void window_timer_init() {
+    load_values();
     window_timer = window_create();
     window_set_click_config_provider(window_timer, timer_config_provider);
     WindowHandlers window_handlers = {
@@ -38,7 +39,24 @@ void window_timer_init() {
     window_stack_push(window_timer, true);
 }
 
+void load_values() {
+    if( persist_exists(PERSIST_KEY_CYCLE))
+	timer_value[TIMER_CYCLE] = persist_read_int(PERSIST_KEY_CYCLE);
+    if( persist_exists(PERSIST_KEY_WORK))
+	timer_value[TIMER_WORK] = persist_read_int(PERSIST_KEY_WORK);
+    if( persist_exists(PERSIST_KEY_REST))
+	timer_value[TIMER_REST] = persist_read_int(PERSIST_KEY_REST);
+}
+
+void persist_values() {
+    persist_write_int(PERSIST_KEY_CYCLE, timer_value[TIMER_CYCLE]);
+    persist_write_int(PERSIST_KEY_WORK, timer_value[TIMER_WORK]);
+    persist_write_int(PERSIST_KEY_REST, timer_value[TIMER_REST]);
+}
+
 void window_timer_deinit() {
+    persist_values();
+
     for(int i = 0; i < 3; i++) {
 	text_layer_destroy(layers[i]);
     }
