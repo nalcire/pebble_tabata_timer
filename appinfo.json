@@ -4,12 +4,17 @@
   "longName": "Tabata Timer",
   "companyName": "nalcire",
   "versionCode": 1,
-  "versionLabel": "1.0.0",
+  "versionLabel": "1.1",
   "watchapp": {
     "watchface": false
   },
   "appKeys": {},
   "resources": {
     "media": []
-  }
+  },
+  "targetPlatforms": [
+    "aplite",
+    "basalt"
+  ],
+  "sdkVersion": "3"
 }
