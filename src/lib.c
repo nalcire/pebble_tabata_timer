@@ -1,5 +1,5 @@
 #include "lib.h"
-#include <time.h>
+#include <pebble.h>
 
 char * itoa(int num, int size) {
     int temp = num;
