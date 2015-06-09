@@ -31,9 +31,10 @@ char timer_text[][15] = {"", "", ""};
 void window_timer_init() {
     load_values();
     window_timer = window_create();
+    window_set_background_color(window_timer, COLOR_FALLBACK(GColorDukeBlue, GColorWhite));
     window_set_click_config_provider(window_timer, timer_config_provider);
     WindowHandlers window_handlers = {
-	.load = &window_timer_load
+        .load = &window_timer_load
     };
     window_set_window_handlers(window_timer, window_handlers);
     window_stack_push(window_timer, true);
@@ -41,11 +42,11 @@ void window_timer_init() {
 
 void load_values() {
     if( persist_exists(PERSIST_KEY_CYCLE))
-	timer_value[TIMER_CYCLE] = persist_read_int(PERSIST_KEY_CYCLE);
+        timer_value[TIMER_CYCLE] = persist_read_int(PERSIST_KEY_CYCLE);
     if( persist_exists(PERSIST_KEY_WORK))
-	timer_value[TIMER_WORK] = persist_read_int(PERSIST_KEY_WORK);
+        timer_value[TIMER_WORK] = persist_read_int(PERSIST_KEY_WORK);
     if( persist_exists(PERSIST_KEY_REST))
-	timer_value[TIMER_REST] = persist_read_int(PERSIST_KEY_REST);
+        timer_value[TIMER_REST] = persist_read_int(PERSIST_KEY_REST);
 }
 
 void persist_values() {
@@ -58,7 +59,7 @@ void window_timer_deinit() {
     persist_values();
 
     for(int i = 0; i < 3; i++) {
-	text_layer_destroy(layers[i]);
+        text_layer_destroy(layers[i]);
     }
  
     text_layer_destroy(cycle_text);
@@ -72,6 +73,16 @@ void window_timer_deinit() {
     layer_destroy(countdown_layer);
 
     window_destroy(window_timer);
+}
+
+void set_text_layer_colors(TextLayer *layer) {
+    text_layer_set_background_color(layer, COLOR_FALLBACK(GColorClear, GColorWhite));
+    text_layer_set_text_color(layer, COLOR_FALLBACK(GColorChromeYellow, GColorBlack));
+}
+
+void set_text_layer_colors_reverse(TextLayer *layer) {
+    text_layer_set_background_color(layer, COLOR_FALLBACK(GColorChromeYellow, GColorBlack));
+    text_layer_set_text_color(layer, COLOR_FALLBACK(GColorDukeBlue, GColorWhite));
 }
 
 void window_timer_load(Window *window) {
@@ -95,56 +106,65 @@ void window_timer_load(Window *window) {
     layer_set_hidden(countdown_layer, true);
 
     countdown_text = text_layer_create(GRect(20,45,120,55));
+    set_text_layer_colors(countdown_text);
     text_layer_set_font(countdown_text, fonts_get_system_font(FONT_KEY_BITHAM_42_LIGHT));
     text_layer_set_text(countdown_text, "ready");
     layer_add_child(countdown_layer, text_layer_get_layer(countdown_text));
 
     layers[TIMER_CYCLE] = text_layer_create(GRect(28,25,27,30));
     text_layer_set_font(layers[TIMER_CYCLE], fonts_get_system_font(FONT_KEY_GOTHIC_28));
-    text_layer_set_text_color(layers[TIMER_CYCLE], GColorBlack);
+    set_text_layer_colors(layers[TIMER_CYCLE]);
     text_layer_set_text(layers[TIMER_CYCLE], timer_text[TIMER_CYCLE]);
     layer_add_child(timer_layer, text_layer_get_layer(layers[TIMER_CYCLE]));
 
     cycle_text = text_layer_create(GRect(55,25,80,30));
+    set_text_layer_colors(cycle_text);
     text_layer_set_font(cycle_text, fonts_get_system_font(FONT_KEY_GOTHIC_24));
     text_layer_set_text(cycle_text, "cycles");
     layer_add_child(timer_layer, text_layer_get_layer(cycle_text));
  
     layers[TIMER_WORK] = text_layer_create(GRect(63,55,53,30));
     text_layer_set_font(layers[TIMER_WORK], fonts_get_system_font(FONT_KEY_GOTHIC_28));
-    text_layer_set_text_color(layers[TIMER_WORK], GColorBlack);
+    set_text_layer_colors(layers[TIMER_WORK]);
     text_layer_set_text(layers[TIMER_WORK], timer_text[TIMER_WORK]);
     layer_add_child(timer_layer, text_layer_get_layer(layers[TIMER_WORK]));
 
     work_text = text_layer_create(GRect(28,60,30,30));
+    set_text_layer_colors(work_text);
     text_layer_set_font(work_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(work_text, "work");
     layer_add_child(timer_layer, text_layer_get_layer(work_text));
 
     layers[TIMER_REST] = text_layer_create(GRect(63,85,53,30));
     text_layer_set_font(layers[TIMER_REST], fonts_get_system_font(FONT_KEY_GOTHIC_28));
-    text_layer_set_text_color(layers[TIMER_REST], GColorBlack);
+    set_text_layer_colors(layers[TIMER_REST]);
+    text_layer_set_background_color(layers[TIMER_REST], COLOR_FALLBACK(GColorClear, GColorWhite));
+    text_layer_set_text_color(layers[TIMER_REST], COLOR_FALLBACK(GColorChromeYellow, GColorBlack));
     text_layer_set_text(layers[TIMER_REST], timer_text[TIMER_REST]);
     layer_add_child(timer_layer, text_layer_get_layer(layers[TIMER_REST]));
 
     rest_text = text_layer_create(GRect(28,90,30,30));
+    set_text_layer_colors(rest_text);
     text_layer_set_font(rest_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(rest_text, "rest");
     layer_add_child(timer_layer, text_layer_get_layer(rest_text));
 
     reset_text = text_layer_create(GRect(35,130,109,52));
+    set_text_layer_colors(reset_text);
     text_layer_set_font(reset_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(reset_text, "1 more round -->");
     layer_add_child(timer_layer, text_layer_get_layer(reset_text)); 
     layer_set_hidden(text_layer_get_layer(reset_text), true);
 
     pause_text = text_layer_create(GRect(35,0,109,25));
+    set_text_layer_colors(pause_text);
     text_layer_set_font(pause_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(pause_text, "timer paused -->");
     layer_add_child(timer_layer, text_layer_get_layer(pause_text));
     layer_set_hidden(text_layer_get_layer(pause_text), true);
 
     start_text = text_layer_create(GRect(45,0,99,25));
+    set_text_layer_colors(start_text);
     text_layer_set_font(start_text, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     text_layer_set_text(start_text, "start timer -->");
     layer_add_child(timer_layer, text_layer_get_layer(start_text));
@@ -161,24 +181,24 @@ void timer_config_provider(void *context) {
 void timer_config(ClickRecognizerRef recognizer, void *context) {
 
     if( timer_state != TIMER_STATE_IDLE )
-	return;
+        return;
 
     layer_set_hidden(text_layer_get_layer(start_text), true);
     switch(config_mode) {
-	case TIMER_NONE:
-	    config_mode = TIMER_CYCLE;
-	    break;
-	case TIMER_CYCLE:
-	    config_mode = TIMER_WORK;
-	    break;
-	case TIMER_WORK:
-	    config_mode = TIMER_REST;
-	    break;
-	case TIMER_REST:
-	    config_mode = TIMER_NONE;
-	    cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
-	    layer_set_hidden(text_layer_get_layer(start_text), false);
-	    break;
+        case TIMER_NONE:
+            config_mode = TIMER_CYCLE;
+            break;
+        case TIMER_CYCLE:
+            config_mode = TIMER_WORK;
+            break;
+        case TIMER_WORK:
+            config_mode = TIMER_REST;
+            break;
+        case TIMER_REST:
+            config_mode = TIMER_NONE;
+            cycle_length = timer_value[TIMER_WORK] + timer_value[TIMER_REST];
+            layer_set_hidden(text_layer_get_layer(start_text), false);
+            break;
     }    
 
     window_set_view(); 
@@ -200,90 +220,89 @@ void timer_config_stop(ClickRecognizerRef recognizer, void *context) {
 
 void window_set_view() {
     for(int i = 0; i < 3; i++) {
-	if( i == config_mode ) {
-	    text_layer_set_text_color(layers[i], GColorWhite);
-	    text_layer_set_background_color(layers[i], GColorBlack);
-	}
-	else {
-	    text_layer_set_text_color(layers[i], GColorBlack);
-	    text_layer_set_background_color(layers[i], GColorWhite);
-	}	
+        if( i == config_mode ) {
+            set_text_layer_colors_reverse(layers[i]);
+        }
+        else {
+            set_text_layer_colors(layers[i]);
+        }   
     } 
 }
-	
+    
 void up_click(ClickRecognizerRef recognizer, void *context) {
     
     switch(config_mode) {
-	case TIMER_NONE:
-	    if( timer_state != TIMER_STATE_COUNTDOWN ) 
-		toggle_timer();
-	    break;
-	case TIMER_CYCLE:
-	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_CYCLE] > 1  ) {
-		timer_value[TIMER_CYCLE]--;
-		reset_display(config_mode);
-	    }
-	    break;
-	case TIMER_WORK:
-	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_WORK] > 1 ) {
-		timer_value[TIMER_WORK]--;
-		reset_display(config_mode);
-	    }
-	    break;
-	case TIMER_REST:
-	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_REST] > 1 ) {
-		timer_value[TIMER_REST]--;
-		reset_display(config_mode);
-	    }
-	    break;
+        case TIMER_NONE:
+            if( timer_state != TIMER_STATE_COUNTDOWN ) 
+                toggle_timer();
+            break;
+        case TIMER_CYCLE:
+            if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_CYCLE] > 1  ) {
+                timer_value[TIMER_CYCLE]--;
+                reset_display(config_mode);
+            }
+            break;
+        case TIMER_WORK:
+            if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_WORK] > 1 ) {
+                timer_value[TIMER_WORK]--;
+                reset_display(config_mode);
+            }
+            break;
+        case TIMER_REST:
+            if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_REST] > 1 ) {
+                timer_value[TIMER_REST]--;
+                reset_display(config_mode);
+            }
+            break;
     }
 }
 
 void down_click(ClickRecognizerRef recognizer, void *context) {
     switch(config_mode) {
-	case TIMER_NONE:
-	    if( timer_state != TIMER_STATE_COUNTDOWN )
-		reset_timer();
-	    break;
-	case TIMER_CYCLE:
-	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_CYCLE] < 99 ) {
-		timer_value[TIMER_CYCLE]++;
-		reset_display(config_mode);
-	    }
-	    break;
-	case TIMER_WORK:
-	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_WORK] < 5999 ) {
-		timer_value[TIMER_WORK]++;
-		reset_display(config_mode);
-	    }
-	    break;
-	case TIMER_REST:
-	    if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_REST] < 5999 ) {
-		timer_value[TIMER_REST]++;
-		reset_display(config_mode);
-	    }
-	    break;
+        case TIMER_NONE:
+            if( timer_state != TIMER_STATE_COUNTDOWN )
+                reset_timer();
+                break; 
+        case TIMER_CYCLE:
+            if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_CYCLE] < 99 ) {
+                timer_value[TIMER_CYCLE]++;
+                reset_display(config_mode);
+            }
+            break;
+        case TIMER_WORK:
+            if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_WORK] < 5999 ) {
+                timer_value[TIMER_WORK]++;
+                reset_display(config_mode);
+            }
+            break;
+        case TIMER_REST:
+            if( timer_state == TIMER_STATE_IDLE && timer_value[TIMER_REST] < 5999 ) {
+                timer_value[TIMER_REST]++;
+                reset_display(config_mode);
+            }
+            break;
     }
 }
 
 void toggle_timer() {
     switch(timer_state) {
-	case TIMER_STATE_IDLE:
-	    previous_mode = TIMER_WORK;
-	    completed_cycles = 0;
-	    layer_set_hidden(text_layer_get_layer(start_text), true);
-	    start_countdown();
-	    break;
-	case TIMER_STATE_RUNNING:
-	    app_timer_cancel(timer_handle);
-	    pause_offset += get_ticks_now_in_seconds() - timer_start;
-	    timer_state = TIMER_STATE_PAUSED;
-	    layer_set_hidden(text_layer_get_layer(pause_text), false);
-	    vibes_short_pulse();
-	    break;
-	case TIMER_STATE_PAUSED:
-	    start_countdown();
-	    break;
+        case TIMER_STATE_IDLE:
+            previous_mode = TIMER_WORK;
+            completed_cycles = 0;
+            layer_set_hidden(text_layer_get_layer(start_text), true);
+            start_countdown();
+            break;
+        case TIMER_STATE_RUNNING:
+            app_timer_cancel(timer_handle);
+            pause_offset += get_ticks_now_in_seconds() - timer_start;
+            timer_state = TIMER_STATE_PAUSED;
+            layer_set_hidden(text_layer_get_layer(pause_text), false);
+            vibes_short_pulse();
+            window_set_background_color(window_timer, COLOR_FALLBACK(GColorDukeBlue, GColorWhite));
+            break;
+        case TIMER_STATE_PAUSED:
+            start_countdown();
+            break;
     }
 }
 
@@ -319,22 +338,23 @@ void reset_timer() {
     layer_set_hidden(text_layer_get_layer(reset_text), true);
     layer_set_hidden(text_layer_get_layer(start_text), false);
     layer_set_hidden(text_layer_get_layer(pause_text), true);
+    window_set_background_color(window_timer, COLOR_FALLBACK(GColorDukeBlue, GColorWhite));
 }
 
 void countdown_handle_timer() {
     switch(timer_countdown_elapsed) {
-	case 0:
-	case 1:
-	case 2:
-	    update_countdown(timer_countdown_elapsed++);
-	    vibes_double_pulse();
-	    timer_handle = app_timer_register(1000, countdown_handle_timer, NULL); 	    
-	    break;	
-	case 3:
-	    timer_countdown_elapsed = 0;
-	    update_countdown(0);
-	    start_timer();
-	    break;
+        case 0:
+        case 1:
+        case 2:
+            update_countdown(timer_countdown_elapsed++);
+            vibes_double_pulse();
+            timer_handle = app_timer_register(1000, countdown_handle_timer, NULL);      
+            break;  
+        case 3:
+            timer_countdown_elapsed = 0;
+            update_countdown(0);
+            start_timer();
+            break;
     }
 }
 
@@ -345,70 +365,72 @@ void timer_handle_timer() {
    
     int cycles = current_ticks / cycle_length;
     if( cycles != completed_cycles ) {
-	completed_cycles = cycles;
-	update_display(TIMER_CYCLE);
+        completed_cycles = cycles;
+        update_display(TIMER_CYCLE);
     }
 
     elapsed_time_in_cycle  = current_ticks % cycle_length;
     int current_mode;
     if( elapsed_time_in_cycle < timer_value[TIMER_WORK] ) {
-	current_mode = TIMER_WORK;
+        current_mode = TIMER_WORK;
+        window_set_background_color(window_timer, COLOR_FALLBACK(GColorBulgarianRose, GColorWhite));
     }
     else {
-	current_mode = TIMER_REST;
+        current_mode = TIMER_REST;
+        window_set_background_color(window_timer, COLOR_FALLBACK(GColorDarkGreen, GColorWhite));
     }
     update_display(current_mode);
 
     if( current_mode != previous_mode && completed_cycles < timer_value[TIMER_CYCLE]) {
-	if( current_ticks < (timer_value[TIMER_WORK] + timer_value[TIMER_REST]) * timer_value[TIMER_CYCLE] - timer_value[TIMER_REST] )
-	    vibes_long_pulse();
-	reset_display(previous_mode);
-	previous_mode = current_mode;
+        if( current_ticks < (timer_value[TIMER_WORK] + timer_value[TIMER_REST]) * timer_value[TIMER_CYCLE] - timer_value[TIMER_REST] )
+            vibes_long_pulse();
+        reset_display(previous_mode);
+        previous_mode = current_mode;
     }
 
     if( completed_cycles == timer_value[TIMER_CYCLE] - 1 && current_mode == TIMER_REST ) {
-	layer_set_hidden(text_layer_get_layer(reset_text), false);
-	timer_state = TIMER_STATE_DONE;
+        layer_set_hidden(text_layer_get_layer(reset_text), false);
+        timer_state = TIMER_STATE_DONE;
+        window_set_background_color(window_timer, COLOR_FALLBACK(GColorDukeBlue, GColorWhite));
+        const uint32_t segments[] = {100, 100, 100, 100, 100};
+        VibePattern pat = {
+            .durations = segments,
+            .num_segments = ARRAY_LENGTH(segments)
+        };
+        vibes_enqueue_custom_pattern(pat);  
 
-	const uint32_t segments[] = {100, 100, 100, 100, 100};
-	VibePattern pat = {
-	    .durations = segments,
-	    .num_segments = ARRAY_LENGTH(segments)
-	};
-	vibes_enqueue_custom_pattern(pat);	
-
-	return;
+        return;
     }
-
+    
     timer_handle = app_timer_register(TIMER_TICK, timer_handle_timer, NULL);
 }
 
 void update_countdown(int second) {
     switch(second) {
-	case 0:
-	    text_layer_set_text(countdown_text, "ready");
-	    break;
-	case 1:
-	    text_layer_set_text(countdown_text, "  set");
-	    break;
-	case 2:
-	    text_layer_set_text(countdown_text, "  go!");
-	    break;
-    }
+        case 0:
+            text_layer_set_text(countdown_text, "ready");
+            break;
+        case 1:
+            text_layer_set_text(countdown_text, "  set");
+            break;
+        case 2:
+            text_layer_set_text(countdown_text, "  go!");
+            break;
+        }
 }
 
 void update_display(int section) {
     switch(section) {
-	case TIMER_CYCLE:
-	    convert_cycles_to_text(timer_value[section] - completed_cycles, timer_text[section]);
-	    break;
-	case TIMER_WORK:
-	    convert_seconds_to_text(timer_value[section] - elapsed_time_in_cycle, timer_text[section]);
-	    break;
-	case TIMER_REST:
-	    convert_seconds_to_text(timer_value[section] - (elapsed_time_in_cycle - timer_value[TIMER_WORK]), timer_text[section]);
-	    break;
-    }
+        case TIMER_CYCLE:
+            convert_cycles_to_text(timer_value[section] - completed_cycles, timer_text[section]);
+            break;
+        case TIMER_WORK:
+            convert_seconds_to_text(timer_value[section] - elapsed_time_in_cycle, timer_text[section]);
+            break;
+        case TIMER_REST:
+            convert_seconds_to_text(timer_value[section] - (elapsed_time_in_cycle - timer_value[TIMER_WORK]), timer_text[section]);
+            break;
+        }
 
     text_layer_set_text(layers[section], timer_text[section]);
     layer_mark_dirty(text_layer_get_layer(layers[section]));
@@ -416,13 +438,13 @@ void update_display(int section) {
 
 void reset_display(int section) {
     switch(section) {
-	case TIMER_CYCLE:
-	    convert_cycles_to_text(timer_value[TIMER_CYCLE], timer_text[TIMER_CYCLE]);
-	    break;
-	case TIMER_WORK:
-	case TIMER_REST:
-	    convert_seconds_to_text(timer_value[section], timer_text[section]);
-	    break;
+        case TIMER_CYCLE:
+            convert_cycles_to_text(timer_value[TIMER_CYCLE], timer_text[TIMER_CYCLE]);
+            break;
+        case TIMER_WORK:
+        case TIMER_REST:
+            convert_seconds_to_text(timer_value[section], timer_text[section]);
+            break;
     }
 
     text_layer_set_text(layers[section], timer_text[section]);
